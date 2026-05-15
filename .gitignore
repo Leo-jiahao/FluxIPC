@@ -1,0 +1,26 @@
+# Build artifacts
+*.o
+*.a
+*.so
+*.so.*
+test/ipc_demo
+test/ipc_demo_cli
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+\#*\#
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+core
+*.core
+.depend
+
+# Runtime artifacts (shared memory / sockets) — cleaned by `make clean`

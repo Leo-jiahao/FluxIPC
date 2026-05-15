@@ -1,15 +1,14 @@
 # FluxIPC Makefile — libfluxipc.so.1.0
-CC       := gcc
-CFLAGS   := -Wall -Wextra -O2 -g \
+CC       ?= gcc
+CFLAGS   += -Wall -Wextra -O2 -g \
             -Iinclude \
             -D_GNU_SOURCE \
             -Wno-unused-parameter
-LDFLAGS  := -lrt -lpthread -lreadline 
+LDLIBS  += -lrt -lpthread -lreadline 
 
-PREFIX     ?= /usr/local
+PREFIX     ?= /usr
 LIBDIR     ?= $(PREFIX)/lib
 INCLUDEDIR ?= $(PREFIX)/include/fluxipc
-BINDIR     ?= $(PREFIX)/bin
 
 # ── Sources ──────────────────────────────────────────
 
@@ -35,10 +34,10 @@ lib: $(TARGET_LIB)
 # ── Shared library ───────────────────────────────────
 
 $(TARGET_LIB): $(LIB_PIC_OBJS)
-	$(CC) -shared \
+	$(CC) $(LDFLAGS) -shared \
 	    -Wl,-soname,$(SONAME) \
 	    -o $@ \
-	    $^ $(LDFLAGS)
+	    $^ $(LDLIBS)
 
 	ln -sf $(TARGET_LIB) libfluxipc.so.1
 	ln -sf $(TARGET_LIB) libfluxipc.so
@@ -61,7 +60,6 @@ clean:
 install: lib
 	install -d $(DESTDIR)$(LIBDIR)
 	install -d $(DESTDIR)$(INCLUDEDIR)
-	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(TARGET_LIB) $(DESTDIR)$(LIBDIR)/
 	ln -sf $(TARGET_LIB) $(DESTDIR)$(LIBDIR)/$(SONAME)
 	ln -sf $(SONAME)       $(DESTDIR)$(LIBDIR)/libfluxipc.so
