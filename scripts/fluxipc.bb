@@ -3,26 +3,17 @@ DESCRIPTION = "High-performance shared memory IPC framework"
 HOMEPAGE = "https://example.com/fluxipc"
 SECTION = "libs"
 
-LICENSE = "MIT"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=<fill_me>"
+LICENSE = "CLOSED"
 
-PV = "1.0"
+SRC_URI = "file://FluxIPC-1.0.0.tar.gz"
+# SRC_URI[sha256sum] = "f5fa0c0853647721e097d5c3096026bac25055e098c0a395d22d4cffb463b184"
+S = "${WORKDIR}/FluxIPC-1.0.0"
 
-SRC_URI = "file://."
-
-S = "${WORKDIR}"
 
 inherit pkgconfig
 
 # readline 依赖
 DEPENDS += "readline"
-
-# 传递 Yocto toolchain
-EXTRA_OEMAKE = "\
-    CC='${CC}' \
-    CFLAGS='${CFLAGS}' \
-    LDFLAGS='${LDFLAGS}' \
-"
 
 # ─────────────────────────────────────────────
 # Build
