@@ -89,7 +89,7 @@ static void fluxipc_usage(const char *prog)
         "Usage:\n"
         "  %s <command> [args...]          调用 IPC 命令\n"
         "  %s --fic <command> [args...]    调用 IPC 命令（显式指定）\n"
-        "  %s --flc                        交互式 shell\n"
+        "  %s --fic                        交互式 shell\n"
         "  %s --help, -h                   显示帮助\n"
         "\n"
         "可用命令 (server: %s):\n",
