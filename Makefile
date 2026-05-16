@@ -80,13 +80,13 @@ uninstall:
 test: lib
 	$(MAKE) -C test all
 	@echo "=== Starting server in background ==="
-	./test/ipc_demo &
+	./test/ipc_demo -d &
 	@SERVER_PID=$$!; \
 	sleep 0.3; \
 	echo "=== Single calls ==="; \
-	./test/ipc_demo_cli ping hello world; \
-	./test/ipc_demo_cli get_stats cpu; \
-	./test/ipc_demo_cli get_map north; \
+	./test/ipc_demo ping hello world; \
+	./test/ipc_demo get_stats cpu; \
+	./test/ipc_demo get_map north; \
 	echo "=== Stopping server ==="; \
 	kill $$SERVER_PID 2>/dev/null; \
 	wait $$SERVER_PID 2>/dev/null; \

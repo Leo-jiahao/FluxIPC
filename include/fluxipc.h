@@ -6,14 +6,11 @@
 /*
  * FluxIPC — 统一 IPC 库
  *
- * 只需包含此头文件即可使用。从 main() 调用 fluxipc_init(argc, argv)，
- * 库根据二进制名称和参数自动识别角色：
+ * 只需包含此头文件即可使用。根据使用场景调用不同初始化接口：
  *
- *   角色          触发条件
- *   ────          ──────
- *   server        名称不含 "cli"/"cmd"/"client"
- *   client        名称含 "cli"/"cmd"/"client"，或 argv[1] == "--fic <command>"
- *   interactive   argv[1] == "--flc"
+ *   fluxipc_client_init(argc, argv)       客户端模式，执行一条 IPC 命令
+ *   fluxipc_interactive_init(argc, argv)  交互式 shell 模式
+ *   fluxipc_server_init(prog_name)        服务端模式
  *
  * 命令通过 REGISTER_FLUXIPC() 在编译期注册。
  */
@@ -66,7 +63,20 @@ extern fluxipc_entry_t __stop_fluxipc_registry[];
 
 /* ── 公开 API ───────────────────────────────────────────── */
 
-int  fluxipc_init(int argc, char **argv);
+/* 打印帮助信息：框架模式说明 + 所有注册的 IPC 命令 */
+void fluxipc_usage(const char *prog);
+
+/* 客户端模式：连接服务端并执行一条 IPC 命令。
+ * argv[0] 为命令名，argv[1..] 为命令参数。 */
+int fluxipc_client_init(int argc, char **argv);
+
+/* 交互式客户端模式：启动 readline 交互 shell */
+int fluxipc_interactive_init(int argc, char **argv);
+
+/* 服务端模式：创建并启动 IPC 服务端。
+ * prog_name 为程序名（通常传入 argv[0]），用于日志显示。 */
+int fluxipc_server_init(const char *prog_name);
+
 int  fluxipc_poll(void *data);
 void fluxipc_destroy(void);
 void fluxipc_stop(void);

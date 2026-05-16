@@ -1,9 +1,10 @@
 /*
  * test/main.c — FluxIPC 测试应用
  *
- * 单个二进制，通过 symlink 或 argv 在运行时选择角色：
- *   ./ipc_demo                        → 服务端（按名称自动识别）
- *   ./ipc_demo_cli <cmd> [args...]    → 客户端（名称含 "cli"）
+ * 单个二进制，通过命令行参数选择角色：
+ *   ./ipc_demo  ping hello          → 客户端（默认）
+ *   ./ipc_demo  -c, --fic           → 交互式 shell
+ *   ./ipc_demo  -d, --fid           → 服务端
  */
 
 #include "fluxipc.h"
@@ -13,6 +14,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <getopt.h>
 
 /* ── 服务端优雅关闭的信号处理 ──────────────────────────── */
 
@@ -107,22 +109,68 @@ REGISTER_FLUXIPC("get_map",
 
 /* ── main ──────────────────────────────────────────────── */
 
+typedef enum { MODE_CLIENT, MODE_SERVER, MODE_INTERACTIVE } app_mode_t;
+
+static void print_app_usage(const char *prog)
+{
+    printf("FluxIPC — Inter-Process Communication Framework\n"
+           "\n"
+           "Usage modes:\n"
+           "  %s  <command> [args...]    执行 IPC 命令 (客户端)\n"
+           "  %s  -c, --fic              交互式 shell (客户端)\n"
+           "  %s  -d, --fid              启动 IPC 服务 (守护进程)\n"
+           "  %s  -h, --help             显示此帮助\n"
+           "\n",
+           prog, prog, prog, prog);
+}
+
 int main(int argc, char **argv)
 {
-    if (fluxipc_init(argc, argv) != 0)
-        return 1;
+    app_mode_t mode = MODE_CLIENT;
 
-    /* fluxipc_init() 在客户端/交互角色中不会返回，
-     * 到达此处即说明我们是服务端。 */
+    static struct option long_opts[] = {
+        {"fic",  no_argument, 0, 'c'},
+        {"fid",  no_argument, 0, 'd'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}
+    };
 
-    signal(SIGINT,  on_signal);
-    signal(SIGTERM, on_signal);
-
-    while (g_running) {
-        if (fluxipc_poll(NULL) != 0)
-            break;
+    int opt;
+    while ((opt = getopt_long(argc, argv, "cdh", long_opts, NULL)) != -1) {
+        switch (opt) {
+        case 'c': mode = MODE_INTERACTIVE; break;
+        case 'd': mode = MODE_SERVER;      break;
+        case 'h': print_app_usage(argv[0]); fluxipc_usage(argv[0]); return 0;
+        default:  print_app_usage(argv[0]); fluxipc_usage(argv[0]); return 1;
+        }
     }
 
-    fluxipc_destroy();
-    return 0;
+    switch (mode) {
+    case MODE_SERVER: {
+        if (fluxipc_server_init(argv[0]) != 0)
+            return 1;
+
+        signal(SIGINT,  on_signal);
+        signal(SIGTERM, on_signal);
+
+        while (g_running) {
+            if (fluxipc_poll(NULL) != 0)
+                break;
+        }
+
+        fluxipc_destroy();
+        return 0;
+    }
+    case MODE_INTERACTIVE:
+        return fluxipc_interactive_init(argc, argv);
+
+    case MODE_CLIENT:
+    default:
+        if (optind >= argc) {
+            print_app_usage(argv[0]);
+            fluxipc_usage(argv[0]);
+            return 1;
+        }
+        return fluxipc_client_init(argc - optind, argv + optind);
+    }
 }

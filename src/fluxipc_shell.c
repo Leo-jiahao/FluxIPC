@@ -86,9 +86,9 @@ static int shell_parse(char *line, char **argv)
 /* ── IPC 命令执行 ──────────────────────────────────────── */
 
 /*
- * 复用当前可执行文件通过 --fic 调用服务端，避免重复客户端逻辑。
+ * 复用当前可执行文件直接执行 IPC 命令（客户端模式为默认模式）。
  *
- *   myapp --fic get_stats
+ *   myapp get_stats
  */
 static int shell_execute_ipc(int argc, char **argv)
 {
@@ -109,7 +109,7 @@ static int shell_execute_ipc(int argc, char **argv)
 
     off += snprintf(cmdline + off,
                     sizeof(cmdline) - off,
-                    "%s --fic",
+                    "%s",
                     program_invocation_name);
 
     for (int i = 0; i < argc; i++) {
