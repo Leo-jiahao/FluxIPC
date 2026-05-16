@@ -22,8 +22,18 @@ static const char *derive_server_name(const char *prog)
 {
     static char buf[64];
 
-    const char *base = strrchr(prog, '/');
-    base = base ? base + 1 : prog;
+    /* 使用 /proc/self/exe 获取实际二进制名，而非 argv[0] */
+    char exe[256];
+    ssize_t len = readlink("/proc/self/exe", exe, sizeof(exe) - 1);
+    const char *base;
+    if (len > 0) {
+        exe[len] = '\0';
+        base = strrchr(exe, '/');
+        base = base ? base + 1 : exe;
+    } else {
+        base = strrchr(prog, '/');
+        base = base ? base + 1 : prog;
+    }
     strncpy(buf, base, sizeof(buf) - 1);
     buf[sizeof(buf) - 1] = '\0';
 
@@ -72,7 +82,7 @@ static role_t detect_role(int argc, char **argv)
 
 /* ── 客户端模式 ────────────────────────────────────────── */
 
-static void client_usage(const char *prog)
+static void fluxipc_usage(const char *prog)
 {
     const char *srv = derive_server_name(prog);
     fprintf(stderr,
@@ -91,12 +101,6 @@ static int run_client(int argc, char **argv)
 {
     const char *srv_name = derive_server_name(argv[0]);
 
-    /* --help / -h */
-    if (argc > 1 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
-        client_usage(argv[0]);
-        exit(0);
-    }
-
     /* 解析命令名和参数 */
     const char *cmd_name;
     int         cmd_argc;
@@ -104,7 +108,7 @@ static int run_client(int argc, char **argv)
 
     if (argc > 1 && strcmp(argv[1], "--fic") == 0) {
         if (argc < 3) {
-            client_usage(argv[0]);
+            fluxipc_usage(argv[0]);
             exit(1);
         }
         cmd_name = argv[2];
@@ -112,7 +116,7 @@ static int run_client(int argc, char **argv)
         cmd_argv = argv + 3;
     } else {
         if (argc < 2) {
-            client_usage(argv[0]);
+            fluxipc_usage(argv[0]);
             exit(1);
         }
         cmd_name = argv[1];
@@ -176,13 +180,20 @@ static int create_server(int argc, char **argv)
 
 static int run_interactive(int argc, char **argv)
 {
-    return fluxipc_shell_main(argc, argv);
+    fluxipc_shell_main(argc, argv);
+    exit(0);
 }
 
 /* ── 公开入口 ──────────────────────────────────────────── */
 
 int fluxipc_init(int argc, char **argv)
 {
+    /* --help / -h */
+    if (argc > 1 && (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0)) {
+        fluxipc_usage(argv[0]);
+        exit(0);
+    }
+
     role_t role = detect_role(argc, argv);
 
     switch (role) {
