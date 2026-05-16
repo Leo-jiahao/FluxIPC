@@ -54,7 +54,7 @@ static int cmd_ping(int argc, char **argv,
 }
 REGISTER_FLUXIPC("ping",
                  "ping [message...]  — 控制面往返测试",
-                 0, 0,
+                 0,
                  cmd_ping,
                  NULL);
 
@@ -82,7 +82,7 @@ static int cmd_get_stats(int argc, char **argv,
 }
 REGISTER_FLUXIPC("get_stats",
                  "get_stats [filter]  — 返回 JSON 格式系统状态",
-                 1, 4096,
+                 4096,
                  cmd_get_stats,
                  echo_json);
 
@@ -103,7 +103,7 @@ static int cmd_get_map(int argc, char **argv,
 }
 REGISTER_FLUXIPC("get_map",
                  "get_map [region]  — 返回 ASCII 区域地图",
-                 2, 8192,
+                 8192,
                  cmd_get_map,
                  echo_map);
 

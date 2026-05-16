@@ -23,8 +23,15 @@ static void shm_name(char *buf, size_t sz, const char *server_name)
 /* ── fluxipc_shm_create ───────────────────────────────── */
 
 /*
- * 扫描 fluxipc_registry，收集唯一的 shm_obj_id，计算段总大小，
+ * 扫描 fluxipc_registry 段，为每个 slot_data_sz > 0 的 entry 自动分配
+ * 递增的 shm_obj_id（从 1 开始），收集唯一对象信息，计算段总大小，
  * 创建 + mmap，初始化所有槽池。
+ *
+ * 自动编号规则：
+ *   - 按 ELF 段中注册顺序遍历
+ *   - slot_data_sz == 0 的 entry 跳过（纯控制平面命令）
+ *   - 同一 shm_obj_id 可被多条命令共享（框架不拆分同 id 的 entry），
+ *     但在自动模式下每条有 slot_data_sz > 0 的 entry 各自独立获得唯一 id
  */
 int fluxipc_shm_create(fluxipc_shm_t *shm, const char *server_name,
                    uint32_t num_slots)
@@ -34,24 +41,32 @@ int fluxipc_shm_create(fluxipc_shm_t *shm, const char *server_name,
     if (num_slots == 0)
         num_slots = FLUXIPC_DEFAULT_SLOTS;
 
-    /* ── 第一遍：从注册表收集唯一的 obj_id ── */
+    /* ── 第一遍：收集唯一 obj_id（assign_ids 已提前完成编号） ── */
 
     typedef struct { uint32_t obj_id; size_t slot_data_sz; } obj_info_t;
     obj_info_t objs[64];
     uint32_t num_objs = 0;
+    uint32_t next_id  = 1;   /* 仅用于兼容路径，正常情况 assign_ids 已填好 */
 
     for (fluxipc_entry_t *e = __start_fluxipc_registry;
          e < __stop_fluxipc_registry; e++) {
 
-        if (e->shm_obj_id == 0)
+        if (e->slot_data_sz == 0) {
+            e->shm_obj_id = 0;
             continue;
+        }
 
-        /* 检查是否已存在此 obj_id */
+        /* 防御：若 assign_ids 未被调用，此处补充分配 */
+        if (e->shm_obj_id == 0)
+            e->shm_obj_id = next_id++;
+        else if (e->shm_obj_id >= next_id)
+            next_id = e->shm_obj_id + 1;
+
+        /* 收集唯一 obj_id，同 id 取最大 slot_data_sz */
         int found = 0;
         for (uint32_t i = 0; i < num_objs; i++) {
             if (objs[i].obj_id == e->shm_obj_id) {
                 found = 1;
-                /* 取此对象声明的最大 slot_data_sz */
                 if (e->slot_data_sz > objs[i].slot_data_sz)
                     objs[i].slot_data_sz = e->slot_data_sz;
                 break;

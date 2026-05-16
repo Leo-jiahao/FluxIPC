@@ -28,8 +28,8 @@ typedef int (*fluxipc_handler_fn)(int argc, char **argv,
 typedef struct {
     const char         *name;
     const char         *usage;
-    uint32_t            shm_obj_id;    /* 0 = 无数据平面 */
-    size_t              slot_data_sz;
+    uint32_t            shm_obj_id;    /* 框架启动时自动填充，0 = 无数据平面 */
+    size_t              slot_data_sz;  /* > 0 则自动分配数据平面 */
     fluxipc_handler_fn  handler;
     fluxipc_echo_fn     echo;          /* 客户端输出回调，可为 NULL */
 } fluxipc_entry_t;
@@ -42,20 +42,22 @@ extern fluxipc_entry_t __stop_fluxipc_registry[];
     __attribute__((section("fluxipc_registry"), used, aligned(sizeof(void *))))
 
 /*
- * REGISTER_FLUXIPC(cmd_name, usage_str, shm_obj_id, slot_data_sz, handler, echo_fn)
+ * REGISTER_FLUXIPC(cmd_name, usage_str, slot_data_sz, handler, echo_fn)
  *
  *   cmd_name     - 客户端发送的命令字符串（如 "get_stats"）
  *   usage_str    - 帮助文本
- *   shm_obj_id   - 数据平面命令的非零唯一 ID；0 表示仅控制平面
- *   slot_data_sz - 每个数据槽的字节数（shm_obj_id == 0 时忽略）
+ *   slot_data_sz - 每个数据槽的字节数；0 表示仅控制平面，无共享内存
  *   handler      - 服务端处理函数
  *   echo_fn      - 客户端输出回调（无需特殊格式则为 NULL）
+ *
+ * shm_obj_id 由框架在 fluxipc_server_init() 时按注册顺序自动分配，
+ * 用户无需关心，也不会出现手动编号冲突。
  */
-#define REGISTER_FLUXIPC(cmd_name, usage_str, shm_id, slot_sz, func, echo_fn) \
+#define REGISTER_FLUXIPC(cmd_name, usage_str, slot_sz, func, echo_fn) \
     static fluxipc_entry_t _fluxipc_entry_##func FLUXIPC_SECTION = { \
         .name         = (cmd_name),                                      \
         .usage        = (usage_str),                                     \
-        .shm_obj_id   = (uint32_t)(shm_id),                             \
+        .shm_obj_id   = 0,           /* 由框架启动时填充 */             \
         .slot_data_sz = (size_t)(slot_sz),                               \
         .handler      = (func),                                          \
         .echo         = (echo_fn),                                       \
